@@ -77,14 +77,11 @@ mirrors OTAA session keys to secondary targets automatically.
 ## Installation
 
 ```bash
-git clone <repo-url>
-cd "Mqtt Broker"
+git clone https://github.com/ujals/MQTT-broker-IoT.git
+cd "MQTT-broker-IoT"
 
-# Install broker dependencies
-pip install paho-mqtt requests PyYAML
-
-# Install integration service dependencies
-pip install aiomqtt fastapi uvicorn aiohttp pyyaml cryptography
+# Install all dependencies
+pip install -r requirements.txt
 ```
 
 ---
@@ -123,7 +120,8 @@ python -m mqtt_broker --config config.yaml
 **Terminal 2 — Start the Integration Service**
 
 ```bash
-python integration/main.py --config integration/config.yaml
+cd integration
+python main.py
 ```
 
 **Terminal 3 — Open the Config UI**
@@ -264,7 +262,7 @@ eu868/gateway/{gateway_eui}/event/up
 ### Simulated MQTT Devices
 
 Runs 10 virtual sensors, each publishing JSON telemetry every 30 seconds.
-Also exposes a status HTTP server on port 8080.
+Also exposes a status HTTP server on port 8081.
 
 ```bash
 # Default broker at 192.168.0.104:1883, 30s interval
@@ -284,8 +282,8 @@ devices/sensor-010/telemetry
 
 **Control server:**
 ```
-GET  http://localhost:8080/status   — JSON status of all devices
-POST http://localhost:8080/stop     — stop all devices
+GET  http://localhost:8081/status   — JSON status of all devices
+POST http://localhost:8081/stop     — stop all devices
 ```
 
 **Payload example:**

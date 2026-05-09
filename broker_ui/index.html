@@ -380,7 +380,7 @@
     <div class="card-header">
       <div class="section-title">Simulated Devices</div>
       <span style="margin-left:auto;font-size:11px;color:#555">
-        Refreshes from <code style="color:#6366f1">http://localhost:8080/status</code>
+        Refreshes from <code style="color:#6366f1">http://localhost:8081/status</code>
       </span>
     </div>
     <div id="device-offline-banner" style="display:none;background:#1e1218;border:1px solid #3a2020;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#ef4444">
@@ -446,13 +446,13 @@
 
 <div class="footer">
   MQTT Broker Monitor &mdash; polls integration service at <code>http://localhost:8000</code>
-  and device simulator at <code>http://localhost:8080</code>
+  and device simulator at <code>http://localhost:8081</code>
 </div>
 
 <script>
 // ── Configuration ────────────────────────────────────────────────────────────
 const INTEGRATION_BASE = "http://localhost:8000";
-const DEVICES_BASE     = "http://localhost:8080";
+const DEVICES_BASE     = "http://localhost:8081";
 const STATS_INTERVAL   = 3000;   // ms  — broker stats
 const DEVICE_INTERVAL  = 5000;   // ms  — device simulator status
 const MAX_TOPIC_ROWS   = 20;

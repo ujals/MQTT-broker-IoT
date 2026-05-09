@@ -8,7 +8,7 @@ Payload:
   {"deviceId": "...", "temperature": ..., "humidity": ...,
    "battery": ..., "rssi": ..., "timestamp": "..."}
 
-Also exposes a lightweight HTTP control server on port 8080:
+Also exposes a lightweight HTTP control server on port 8081:
   GET  /status  — list all devices + last publish time
   POST /stop    — stop all devices and exit
 
@@ -195,7 +195,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
 
-def _run_http_server(port: int = 8080) -> HTTPServer:
+def _run_http_server(port: int = 8081) -> HTTPServer:
     server = HTTPServer(("0.0.0.0", port), _Handler)
     t = Thread(target=server.serve_forever, daemon=True)
     t.start()
@@ -209,11 +209,11 @@ async def main(host: str, port: int, interval: int) -> None:
     print(f"  MQTT Device Simulator — {len(DEVICES)} devices")
     print(f"  Broker : {host}:{port}")
     print(f"  Interval: {interval}s")
-    print(f"  Control : http://localhost:8080/status")
+    print(f"  Control : http://localhost:8081/status")
     print("=" * 60)
 
-    http_server = _run_http_server(8080)
-    print("HTTP control server started on :8080")
+    http_server = _run_http_server(8081)
+    print("HTTP control server started on :8081")
 
     tasks = [
         asyncio.create_task(device_loop(d, host, port, interval))
