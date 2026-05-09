@@ -1,0 +1,13 @@
+{
+  "chirpstack": {
+    "api_url": "http://YOUR_CHIRPSTACK_IP:8091",
+    "api_key": "YOUR_JWT_API_KEY",
+    "application_id": "YOUR_APP_UUID",
+    "device_profile_id": "YOUR_PROFILE_UUID",
+    "mqtt_host": "YOUR_CHIRPSTACK_IP",
+    "mqtt_port": 1883,
+    "mqtt_username": "",
+    "mqtt_password": ""
+  },
+  "targets": []
+}

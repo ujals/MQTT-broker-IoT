@@ -5,3 +5,6 @@ __pycache__/
 .env
 certs/
 .claude/
+integration/settings.json
+test_client.py
+mqtt_bridge.py

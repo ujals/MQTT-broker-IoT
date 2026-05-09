@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQTT Integration</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+  header { background: #1a1d27; padding: 16px 24px; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #555; flex-shrink: 0; }
+  .dot.green { background: #22c55e; } .dot.red { background: #ef4444; }
+  nav { display: flex; gap: 4px; padding: 16px 24px 0; }
+  nav button { background: none; border: none; color: #888; padding: 8px 16px; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 14px; }
+  nav button.active { background: #1a1d27; color: #fff; border: 1px solid #2a2d3a; border-bottom: none; }
+  .tab { display: none; padding: 24px; max-width: 860px; }
+  .tab.active { display: block; }
+  .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
+  input, select { width: 100%; background: #0f1117; border: 1px solid #2a2d3a; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-size: 14px; margin-bottom: 12px; }
+  input:focus, select:focus { outline: none; border-color: #6366f1; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .btn { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .btn-primary { background: #6366f1; color: #fff; }
+  .btn-primary:hover { background: #4f52d4; }
+  .btn-secondary { background: #2a2d3a; color: #e0e0e0; }
+  .btn-secondary:hover { background: #363a4f; }
+  .btn-danger { background: #3d1a1a; color: #ef4444; }
+  .btn-danger:hover { background: #5a2020; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+  .status-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat { background: #0f1117; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px; text-align: center; }
+  .stat .val { font-size: 28px; font-weight: 700; color: #6366f1; }
+  .stat .lbl { font-size: 12px; color: #888; margin-top: 4px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 12px; white-space: nowrap; }
+  .badge.ok  { background: #14301f; color: #22c55e; }
+  .badge.err { background: #2d1515; color: #ef4444; }
+  .badge.unk { background: #1e1e2e; color: #888; }
+  /* Targets table */
+  .target-list { display: flex; flex-direction: column; gap: 8px; }
+  .target-row { display: flex; align-items: center; gap: 10px; background: #0f1117; border: 1px solid #2a2d3a; border-radius: 6px; padding: 10px 14px; }
+  .target-row .tname { font-size: 14px; font-weight: 500; flex: 1; }
+  .target-row .thost { font-size: 13px; color: #888; flex: 2; }
+  /* Add target form */
+  .add-form { background: #111420; border: 1px dashed #2a2d3a; border-radius: 8px; padding: 16px; margin-top: 12px; display: none; }
+  .add-form.open { display: block; }
+  #toast { position: fixed; bottom: 24px; right: 24px; background: #22c55e; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 14px; display: none; z-index: 99; }
+  #toast.err { background: #ef4444; }
+  hr { border: none; border-top: 1px solid #2a2d3a; margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dot" id="svc-dot"></div>
+  <h1>MQTT Integration</h1>
+  <span style="margin-left:auto;font-size:13px;color:#555">localhost:8000</span>
+</header>
+
+<nav>
+  <button class="active" onclick="showTab('settings',this)">Settings</button>
+  <button onclick="showTab('targets',this)">ChirpStack Targets</button>
+  <button onclick="showTab('status',this)">Status</button>
+</nav>
+
+<!-- Settings Tab -->
+<div class="tab active" id="tab-settings">
+  <div class="card">
+    <h2>Primary ChirpStack — REST API</h2>
+    <label>API URL</label>
+    <input id="api_url" placeholder="http://185.226.124.192:8091" />
+    <label>API Key</label>
+    <input id="api_key" type="password" placeholder="JWT token from ChirpStack" />
+    <div class="row2">
+      <div><label>Default Application ID</label><input id="application_id" placeholder="uuid — used when not in message" /></div>
+      <div><label>Default Device Profile ID</label><input id="device_profile_id" placeholder="uuid — used when not in message" /></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+      <button class="btn btn-secondary" onclick="testApi()">Test API</button>
+    </div>
+    <div id="api-result" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2>Primary ChirpStack — MQTT (Join Watcher)</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:14px">
+      Connect to the primary ChirpStack's Mosquitto to detect OTAA joins and mirror session keys to secondary targets.
+    </p>
+    <div class="row3">
+      <div><label>MQTT Host</label><input id="cs_mqtt_host" placeholder="185.226.124.192" /></div>
+      <div><label>Port</label><input id="cs_mqtt_port" type="number" placeholder="1883" /></div>
+      <div></div>
+    </div>
+    <div class="row2">
+      <div><label>Username (optional)</label><input id="cs_mqtt_username" placeholder="" /></div>
+      <div><label>Password (optional)</label><input id="cs_mqtt_password" type="password" placeholder="" /></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Targets Tab -->
+<div class="tab" id="tab-targets">
+  <div class="card">
+    <h2>ChirpStack MQTT Targets</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:14px">
+      Gateway frames arriving on your broker are bridged to each enabled target's Mosquitto.
+      ChirpStack on that server handles decoding and device management.
+    </p>
+    <div class="target-list" id="target-list">
+      <div style="color:#555;font-size:13px">No targets configured.</div>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:14px" onclick="toggleAddForm()">+ Add Target</button>
+
+    <div class="add-form" id="add-form">
+      <h2 style="margin-bottom:14px">New Secondary ChirpStack Target</h2>
+      <label>Name</label>
+      <input id="t-name" placeholder="e.g. Secondary ChirpStack" />
+      <div class="row3">
+        <div><label>MQTT Host</label><input id="t-host" placeholder="192.168.1.50" /></div>
+        <div><label>Port</label><input id="t-port" type="number" placeholder="1883" /></div>
+        <div><label>QoS</label>
+          <select id="t-qos"><option value="0">0</option><option value="1">1</option></select>
+        </div>
+      </div>
+      <div class="row2">
+        <div><label>MQTT Username (optional)</label><input id="t-user" placeholder="" /></div>
+        <div><label>MQTT Password (optional)</label><input id="t-pass" type="password" placeholder="" /></div>
+      </div>
+      <hr>
+      <p style="font-size:12px;color:#888;margin-bottom:12px">API settings below are used to register devices as ABP after OTAA join on primary.</p>
+      <label>API URL</label>
+      <input id="t-api-url" placeholder="http://secondary-cs:8091" />
+      <label>API Key</label>
+      <input id="t-api-key" type="password" placeholder="JWT token" />
+      <div class="row2">
+        <div><label>Application ID</label><input id="t-app-id" placeholder="uuid" /></div>
+        <div><label>Device Profile ID</label><input id="t-profile-id" placeholder="uuid (ABP profile)" /></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addTarget()">Add</button>
+        <button class="btn btn-secondary" onclick="toggleAddForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status Tab -->
+<div class="tab" id="tab-status">
+  <div class="status-row">
+    <div class="stat"><div class="val" id="m-received">—</div><div class="lbl">Messages Received</div></div>
+    <div class="stat"><div class="val" id="m-forwarded">—</div><div class="lbl">Forwarded</div></div>
+    <div class="stat"><div class="val" id="m-errors">—</div><div class="lbl">Errors</div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Services</h2>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px">Integration Service</span>
+        <span class="badge unk" id="badge-svc">Checking...</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px">ChirpStack API</span>
+        <span class="badge unk" id="badge-cs">Checking...</span>
+      </div>
+    </div>
+    <hr>
+    <h2>MQTT Targets</h2>
+    <div id="status-targets" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <div style="color:#555;font-size:13px">No targets.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const BASE = "http://localhost:8000";
+
+function showTab(name, btn) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  btn.classList.add("active");
+  if (name === "status") refreshStatus();
+  if (name === "targets") loadTargets();
+}
+
+function toast(msg, err=false) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = err ? "err" : "";
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 3000);
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+async function loadSettings() {
+  try {
+    const r = await fetch(`${BASE}/settings`);
+    const d = await r.json();
+    const cs = d.chirpstack || {};
+    document.getElementById("api_url").value          = cs.api_url || "";
+    document.getElementById("api_key").value          = cs.api_key || "";
+    document.getElementById("application_id").value   = cs.application_id || "";
+    document.getElementById("device_profile_id").value= cs.device_profile_id || "";
+    document.getElementById("cs_mqtt_host").value     = cs.mqtt_host || "";
+    document.getElementById("cs_mqtt_port").value     = cs.mqtt_port || "";
+    document.getElementById("cs_mqtt_username").value = cs.mqtt_username || "";
+    document.getElementById("cs_mqtt_password").value = cs.mqtt_password || "";
+    document.getElementById("svc-dot").className      = "dot green";
+  } catch { document.getElementById("svc-dot").className = "dot red"; }
+}
+
+async function saveSettings() {
+  const r = await fetch(`${BASE}/settings`);
+  const current = await r.json();
+  const body = { ...current, chirpstack: {
+    ...( current.chirpstack || {} ),
+    api_url:           document.getElementById("api_url").value.trim(),
+    api_key:           document.getElementById("api_key").value.trim(),
+    application_id:    document.getElementById("application_id").value.trim(),
+    device_profile_id: document.getElementById("device_profile_id").value.trim(),
+    mqtt_host:         document.getElementById("cs_mqtt_host").value.trim(),
+    mqtt_port:         parseInt(document.getElementById("cs_mqtt_port").value) || 1883,
+    mqtt_username:     document.getElementById("cs_mqtt_username").value.trim(),
+    mqtt_password:     document.getElementById("cs_mqtt_password").value.trim(),
+  }};
+  try {
+    const res = await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    if (res.ok) toast("Settings saved");
+    else toast("Save failed", true);
+  } catch { toast("Cannot reach service", true); }
+}
+
+async function testApi() {
+  const el = document.getElementById("api-result");
+  el.innerHTML = '<span style="color:#888;font-size:13px">Testing...</span>';
+  try {
+    const r = await fetch(`${BASE}/chirpstack/test`);
+    const d = await r.json();
+    el.innerHTML = d.ok
+      ? '<span class="badge ok">Connected to ChirpStack API</span>'
+      : `<span class="badge err">${d.error}</span>`;
+  } catch { el.innerHTML = '<span class="badge err">Cannot reach service</span>'; }
+}
+
+// ── Targets ───────────────────────────────────────────────────────────────────
+
+async function loadTargets() {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  const targets = d.targets || [];
+  const list = document.getElementById("target-list");
+  if (!targets.length) {
+    list.innerHTML = '<div style="color:#555;font-size:13px">No targets configured.</div>';
+    return;
+  }
+  list.innerHTML = targets.map((t, i) => `
+    <div class="target-row">
+      <div class="dot ${t.enabled ? 'green' : ''}"></div>
+      <div class="tname">${t.name}</div>
+      <div class="thost">
+        <span>${t.host}:${t.port || 1883}</span>
+        ${t.api_url ? `<br><span style="font-size:11px;color:#6366f1">${t.api_url}</span>` : ''}
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="toggleTarget(${i})">${t.enabled ? 'Disable' : 'Enable'}</button>
+      <button class="btn btn-danger btn-sm" onclick="removeTarget(${i})">Remove</button>
+    </div>`).join("");
+}
+
+function toggleAddForm() {
+  document.getElementById("add-form").classList.toggle("open");
+}
+
+async function addTarget() {
+  const name = document.getElementById("t-name").value.trim();
+  const host = document.getElementById("t-host").value.trim();
+  if (!name || !host) { toast("Name and Host are required", true); return; }
+
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  const targets = d.targets || [];
+  targets.push({
+    name,
+    host,
+    port:           parseInt(document.getElementById("t-port").value) || 1883,
+    qos:            parseInt(document.getElementById("t-qos").value) || 0,
+    username:       document.getElementById("t-user").value.trim(),
+    password:       document.getElementById("t-pass").value.trim(),
+    api_url:        document.getElementById("t-api-url").value.trim(),
+    api_key:        document.getElementById("t-api-key").value.trim(),
+    application_id: document.getElementById("t-app-id").value.trim(),
+    profile_id:     document.getElementById("t-profile-id").value.trim(),
+    enabled:        true,
+  });
+
+  const res = await fetch(`${BASE}/settings`, {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ ...d, targets })
+  });
+  if (res.ok) {
+    toast("Target added");
+    document.getElementById("add-form").classList.remove("open");
+    ["t-name","t-host","t-port","t-user","t-pass","t-api-url","t-api-key","t-app-id","t-profile-id"]
+      .forEach(id => document.getElementById(id).value = "");
+    loadTargets();
+  } else toast("Failed to save", true);
+}
+
+async function toggleTarget(idx) {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  d.targets[idx].enabled = !d.targets[idx].enabled;
+  await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(d) });
+  loadTargets();
+}
+
+async function removeTarget(idx) {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  d.targets.splice(idx, 1);
+  await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(d) });
+  toast("Target removed");
+  loadTargets();
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+
+async function refreshStatus() {
+  try {
+    const r = await fetch(`${BASE}/metrics`);
+    const d = await r.json();
+    document.getElementById("m-received").textContent  = d.received;
+    document.getElementById("m-forwarded").textContent = d.forwarded;
+    document.getElementById("m-errors").textContent    = d.errors;
+    document.getElementById("badge-svc").textContent   = "Online";
+    document.getElementById("badge-svc").className     = "badge ok";
+    document.getElementById("svc-dot").className       = "dot green";
+  } catch {
+    document.getElementById("badge-svc").textContent = "Offline";
+    document.getElementById("badge-svc").className   = "badge err";
+    document.getElementById("svc-dot").className     = "dot red";
+  }
+  try {
+    const r = await fetch(`${BASE}/chirpstack/test`);
+    const d = await r.json();
+    document.getElementById("badge-cs").textContent = d.ok ? "Connected" : d.error;
+    document.getElementById("badge-cs").className   = "badge " + (d.ok ? "ok" : "err");
+  } catch {
+    document.getElementById("badge-cs").textContent = "Unknown";
+    document.getElementById("badge-cs").className   = "badge unk";
+  }
+  try {
+    const r = await fetch(`${BASE}/chirpstack/targets`);
+    const targets = await r.json();
+    const el = document.getElementById("status-targets");
+    if (!targets.length) { el.innerHTML = '<div style="color:#555;font-size:13px">No targets.</div>'; return; }
+    el.innerHTML = targets.map(t => `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px">${t.name} <span style="color:#555;font-size:12px">${t.host}:${t.port}</span></span>
+        <span class="badge ${t.connected ? 'ok' : 'err'}">${t.connected ? 'Connected' : 'Disconnected'}</span>
+      </div>`).join("");
+  } catch {}
+}
+
+loadSettings();
+setInterval(refreshStatus, 10000);
+</script>
+</body>
+</html>

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQTT Broker Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  /* ── Header ───────────────────────────────────────────────────── */
+  header {
+    background: #1a1d27;
+    padding: 14px 24px;
+    border-bottom: 1px solid #2a2d3a;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+  .host-tag {
+    margin-left: auto;
+    font-size: 12px;
+    color: #555;
+    font-family: monospace;
+  }
+  .refresh-btn {
+    background: #2a2d3a;
+    border: 1px solid #3a3d4a;
+    color: #aaa;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: 12px;
+    transition: background 0.15s;
+  }
+  .refresh-btn:hover { background: #363a4f; color: #e0e0e0; }
+  .refresh-btn.active { background: #1f3a2a; color: #22c55e; border-color: #22c55e44; }
+
+  /* ── Live dot ─────────────────────────────────────────────────── */
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+  .dot.red   { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+  .dot.pulse { animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  /* ── Layout ───────────────────────────────────────────────────── */
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+  }
+
+  /* ── Stats row ────────────────────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: #1a1d27;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    padding: 18px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: #6366f1;
+  }
+  .stat-card.red::before   { background: #ef4444; }
+  .stat-card.green::before { background: #22c55e; }
+  .stat-card.amber::before { background: #f59e0b; }
+  .stat-val {
+    font-size: 30px;
+    font-weight: 700;
+    color: #6366f1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    transition: color 0.3s;
+  }
+  .stat-card.red   .stat-val { color: #ef4444; }
+  .stat-card.green .stat-val { color: #22c55e; }
+  .stat-card.amber .stat-val { color: #f59e0b; }
+  .stat-lbl {
+    font-size: 11px;
+    color: #666;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .stat-delta {
+    font-size: 11px;
+    color: #555;
+    margin-top: 3px;
+    font-family: monospace;
+    min-height: 16px;
+  }
+
+  /* ── Card ─────────────────────────────────────────────────────── */
+  .card {
+    background: #1a1d27;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .card-header .section-title { margin-bottom: 0; }
+
+  /* ── Topic table ──────────────────────────────────────────────── */
+  .topic-table { width: 100%; border-collapse: collapse; }
+  .topic-table th {
+    text-align: left;
+    font-size: 11px;
+    color: #555;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 10px 10px;
+    border-bottom: 1px solid #2a2d3a;
+  }
+  .topic-table td {
+    padding: 8px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid #1a1d2733;
+    vertical-align: middle;
+  }
+  .topic-table tr:last-child td { border-bottom: none; }
+  .topic-table tr:hover td { background: #1e2130; }
+  .topic-name {
+    font-family: monospace;
+    font-size: 12px;
+    color: #a5b4fc;
+    word-break: break-all;
+  }
+  .topic-count {
+    font-variant-numeric: tabular-nums;
+    color: #e0e0e0;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .bar-cell { width: 200px; }
+  .bar-bg {
+    background: #1a1d27;
+    border-radius: 3px;
+    height: 8px;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #2a2d3a;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4f52d4, #6366f1);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+  }
+  .empty-row td {
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 24px;
+  }
+
+  /* ── Device grid ──────────────────────────────────────────────── */
+  .device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .device-card {
+    background: #0f1117;
+    border: 1px solid #2a2d3a;
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .device-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .device-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #e0e0e0;
+    font-family: monospace;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .device-location { font-size: 11px; color: #666; }
+  .device-time {
+    font-size: 11px;
+    color: #555;
+    font-family: monospace;
+  }
+  .device-count {
+    font-size: 11px;
+    color: #6366f1;
+  }
+  .status-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge-ok       { background: #14301f; color: #22c55e; }
+  .badge-warn     { background: #2d2200; color: #f59e0b; }
+  .badge-err      { background: #2d1515; color: #ef4444; }
+  .badge-offline  { background: #1e1e2e; color: #555; }
+
+  /* ── Instructions panel ───────────────────────────────────────── */
+  .instructions {
+    background: #111420;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .instructions h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .cmd-block { }
+  .cmd-label {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 5px;
+  }
+  .cmd-line {
+    background: #0a0c12;
+    border: 1px solid #2a2d3a;
+    border-radius: 5px;
+    padding: 8px 12px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #a5b4fc;
+    cursor: pointer;
+    user-select: all;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    transition: border-color 0.15s;
+  }
+  .cmd-line:hover { border-color: #6366f1; }
+  .cmd-copy {
+    color: #555;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  /* ── Footer ───────────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #333;
+    padding: 20px 0 30px;
+  }
+
+  /* ── Responsive ───────────────────────────────────────────────── */
+  @media (max-width: 700px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .bar-cell  { display: none; }
+  }
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .cmd-grid  { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dot" id="hdr-dot"></div>
+  <h1>MQTT Broker Monitor</h1>
+  <span class="host-tag" id="hdr-host">192.168.0.104:1883</span>
+  <button class="refresh-btn active" id="toggle-btn" onclick="toggleAutoRefresh()">
+    Auto-refresh ON
+  </button>
+</header>
+
+<main>
+
+  <!-- Stats row -->
+  <div style="margin-bottom:8px;margin-top:4px" class="section-title">Live Statistics</div>
+  <div class="stats-row">
+    <div class="stat-card green">
+      <div class="stat-val" id="stat-mps">—</div>
+      <div class="stat-lbl">Messages / sec</div>
+      <div class="stat-delta" id="stat-mps-d"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-total">—</div>
+      <div class="stat-lbl">Total Received</div>
+      <div class="stat-delta" id="stat-total-d"></div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-val" id="stat-topics">—</div>
+      <div class="stat-lbl">Active Topics</div>
+      <div class="stat-delta" id="stat-topics-d"></div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-val" id="stat-errors">—</div>
+      <div class="stat-lbl">Errors</div>
+      <div class="stat-delta" id="stat-errors-d"></div>
+    </div>
+  </div>
+
+  <!-- Topic table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="section-title">Top Topics by Message Count</div>
+      <span style="margin-left:auto;font-size:11px;color:#555" id="topic-updated"></span>
+    </div>
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Topic</th>
+          <th style="text-align:right">Count</th>
+          <th class="bar-cell">Distribution</th>
+          <th style="text-align:right">Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="topic-tbody">
+        <tr class="empty-row"><td colspan="4">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Devices section -->
+  <div class="card">
+    <div class="card-header">
+      <div class="section-title">Simulated Devices</div>
+      <span style="margin-left:auto;font-size:11px;color:#555">
+        Refreshes from <code style="color:#6366f1">http://localhost:8080/status</code>
+      </span>
+    </div>
+    <div id="device-offline-banner" style="display:none;background:#1e1218;border:1px solid #3a2020;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#ef4444">
+      Device simulator not running — start it with: <code>python test_devices/mqtt_devices.py</code>
+    </div>
+    <div class="device-grid" id="device-grid">
+      <div style="color:#555;font-size:13px;grid-column:1/-1">
+        No device data — start <code>test_devices/mqtt_devices.py</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="instructions">
+    <h3>Quick Start Commands</h3>
+    <div class="cmd-grid">
+      <div class="cmd-block">
+        <div class="cmd-label">1. Start the MQTT Broker</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>python -m mqtt_broker --config config.yaml</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-label">2. Start the Integration Service</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>python integration/main.py --config integration/config.yaml</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-label">3. Start 10 Simulated MQTT Devices</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>python test_devices/mqtt_devices.py --host 192.168.0.104</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-label">4. Start LoRaWAN Gateway Simulator</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>python test_devices/lorawan_sim.py --host 192.168.0.104</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-label">5. Open Integration Config UI</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>start frontend/index.html</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-label">6. View Integration API</div>
+        <div class="cmd-line" onclick="copyCmd(this)">
+          <span>http://localhost:8000/docs</span>
+          <span class="cmd-copy">click to copy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="footer">
+  MQTT Broker Monitor &mdash; polls integration service at <code>http://localhost:8000</code>
+  and device simulator at <code>http://localhost:8080</code>
+</div>
+
+<script>
+// ── Configuration ────────────────────────────────────────────────────────────
+const INTEGRATION_BASE = "http://localhost:8000";
+const DEVICES_BASE     = "http://localhost:8080";
+const STATS_INTERVAL   = 3000;   // ms  — broker stats
+const DEVICE_INTERVAL  = 5000;   // ms  — device simulator status
+const MAX_TOPIC_ROWS   = 20;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let autoRefresh       = true;
+let statsTimer        = null;
+let deviceTimer       = null;
+let prevReceived      = null;
+let prevTimestamp     = null;
+let topicLastSeen     = {};    // topic → ISO timestamp (client-side tracking)
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmt(n) {
+  if (n === null || n === undefined) return "—";
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + "k";
+  return String(n);
+}
+
+function relTime(isoStr) {
+  if (!isoStr) return "never";
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 5)   return "just now";
+  if (diff < 60)  return `${Math.round(diff)}s ago`;
+  if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+  return `${Math.round(diff / 3600)}h ago`;
+}
+
+function setDot(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = "dot " + (state === "green" ? "green pulse" : state === "red" ? "red" : "");
+}
+
+function copyCmd(el) {
+  const text = el.querySelector("span").textContent.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const hint = el.querySelector(".cmd-copy");
+    if (hint) { hint.textContent = "copied!"; setTimeout(() => hint.textContent = "click to copy", 1500); }
+  }).catch(() => {});
+}
+
+// ── Broker stats ──────────────────────────────────────────────────────────────
+
+async function fetchStats() {
+  try {
+    const [metricsRes, statsRes] = await Promise.allSettled([
+      fetch(`${INTEGRATION_BASE}/metrics`, { signal: AbortSignal.timeout(3000) }),
+      fetch(`${INTEGRATION_BASE}/broker/stats`, { signal: AbortSignal.timeout(3000) }),
+    ]);
+
+    let received   = null;
+    let forwarded  = null;
+    let errors     = null;
+    let topics     = {};
+
+    // Metrics (always available if integration is up)
+    if (metricsRes.status === "fulfilled" && metricsRes.value.ok) {
+      const m = await metricsRes.value.json();
+      received  = m.received  ?? null;
+      forwarded = m.forwarded ?? null;
+      errors    = m.errors    ?? null;
+      setDot("hdr-dot", "green");
+    } else {
+      setDot("hdr-dot", "red");
+    }
+
+    // /broker/stats (may not exist — graceful fallback)
+    if (statsRes.status === "fulfilled" && statsRes.value.ok) {
+      const s = await statsRes.value.json();
+      received  = received  ?? s.received;
+      errors    = errors    ?? s.errors;
+      topics    = s.topics  || {};
+    }
+
+    // Compute messages/sec
+    const now = Date.now();
+    let mps = null;
+    if (prevReceived !== null && received !== null && prevTimestamp !== null) {
+      const dt = (now - prevTimestamp) / 1000;
+      mps = dt > 0 ? Math.round((received - prevReceived) / dt * 10) / 10 : 0;
+    }
+    prevReceived  = received;
+    prevTimestamp = now;
+
+    // Update stats cards
+    document.getElementById("stat-mps").textContent    = mps !== null ? mps : "—";
+    document.getElementById("stat-total").textContent  = fmt(received);
+    document.getElementById("stat-errors").textContent = fmt(errors);
+
+    // Topic count
+    const topicCount = Object.keys(topics).length;
+    document.getElementById("stat-topics").textContent = topicCount > 0 ? topicCount : (received !== null ? "—" : "—");
+
+    // Delta labels
+    document.getElementById("stat-mps-d").textContent    = mps !== null ? `msgs/sec` : "";
+    document.getElementById("stat-total-d").textContent  = received !== null ? `total messages` : "";
+    document.getElementById("stat-errors-d").textContent = errors ? `forwarding errors` : "";
+    document.getElementById("stat-topics-d").textContent = topicCount > 0 ? `active topics` : "";
+
+    renderTopicTable(topics, received);
+
+    document.getElementById("topic-updated").textContent =
+      "updated " + new Date().toLocaleTimeString();
+
+  } catch (err) {
+    setDot("hdr-dot", "red");
+    document.getElementById("stat-mps").textContent    = "—";
+    document.getElementById("stat-total").textContent  = "—";
+    document.getElementById("stat-errors").textContent = "—";
+    document.getElementById("stat-topics").textContent = "—";
+  }
+}
+
+function renderTopicTable(topics, totalReceived) {
+  const tbody = document.getElementById("topic-tbody");
+
+  // Build entries from /broker/stats topics map
+  // Expected: { "topic/name": { count: N, last_seen: "ISO" } }
+  // If /broker/stats is unavailable we use empty {}
+  let entries = Object.entries(topics).map(([name, info]) => ({
+    name,
+    count:    typeof info === "object" ? (info.count || 0) : Number(info),
+    lastSeen: typeof info === "object" ? (info.last_seen || null) : null,
+  }));
+
+  entries.sort((a, b) => b.count - a.count);
+  entries = entries.slice(0, MAX_TOPIC_ROWS);
+
+  if (entries.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">
+      No topic data available — the integration service exposes
+      <code>/broker/stats</code> when the broker reports it.
+    </td></tr>`;
+    return;
+  }
+
+  const maxCount = entries[0].count || 1;
+  tbody.innerHTML = entries.map(e => {
+    const pct = Math.max(2, Math.round(e.count / maxCount * 100));
+    const rel = e.lastSeen ? relTime(e.lastSeen) : "—";
+    return `<tr>
+      <td class="topic-name">${escHtml(e.name)}</td>
+      <td class="topic-count">${fmt(e.count)}</td>
+      <td class="bar-cell">
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </td>
+      <td style="text-align:right;font-size:11px;color:#555;white-space:nowrap">${rel}</td>
+    </tr>`;
+  }).join("");
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ── Device status ─────────────────────────────────────────────────────────────
+
+async function fetchDevices() {
+  try {
+    const res = await fetch(`${DEVICES_BASE}/status`, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error("not ok");
+    const data = await res.json();
+    renderDevices(data.devices || {});
+    document.getElementById("device-offline-banner").style.display = "none";
+  } catch {
+    document.getElementById("device-offline-banner").style.display = "block";
+    document.getElementById("device-grid").innerHTML = `
+      <div style="color:#555;font-size:13px;grid-column:1/-1">
+        Device simulator offline — run: <code style="color:#6366f1">python test_devices/mqtt_devices.py</code>
+      </div>`;
+  }
+}
+
+function renderDevices(devices) {
+  const grid = document.getElementById("device-grid");
+  const entries = Object.entries(devices);
+  if (!entries.length) {
+    grid.innerHTML = `<div style="color:#555;font-size:13px;grid-column:1/-1">No devices reported.</div>`;
+    return;
+  }
+
+  grid.innerHTML = entries.map(([id, d]) => {
+    const status   = d.status || "unknown";
+    const pubTime  = d.last_publish;
+    const count    = d.publish_count || 0;
+    const location = d.location || "";
+
+    let badgeCls = "badge-offline";
+    let badgeLabel = status;
+    if (status === "publishing" || status === "connected") { badgeCls = "badge-ok"; }
+    else if (status === "connecting")                       { badgeCls = "badge-warn"; badgeLabel = "connecting"; }
+    else if (status === "disconnected")                     { badgeCls = "badge-err"; }
+    else if (status === "stopped")                          { badgeCls = "badge-offline"; badgeLabel = "stopped"; }
+
+    // Stale check: if last_publish > 90s ago, warn
+    if (pubTime && badgeCls === "badge-ok") {
+      const age = (Date.now() - new Date(pubTime).getTime()) / 1000;
+      if (age > 90) badgeCls = "badge-warn";
+    }
+
+    return `<div class="device-card">
+      <div class="device-card-header">
+        <div class="dot ${badgeCls === 'badge-ok' ? 'green' : badgeCls === 'badge-err' ? 'red' : ''}"></div>
+        <div class="device-name">${escHtml(id)}</div>
+        <span class="status-badge ${badgeCls}">${escHtml(badgeLabel)}</span>
+      </div>
+      <div class="device-location">${escHtml(location)}</div>
+      <div class="device-time">Last: ${pubTime ? relTime(pubTime) : "never"}</div>
+      <div class="device-count">${count} publishes</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Auto-refresh toggle ───────────────────────────────────────────────────────
+
+function startTimers() {
+  if (statsTimer)  clearInterval(statsTimer);
+  if (deviceTimer) clearInterval(deviceTimer);
+  statsTimer  = setInterval(fetchStats,  STATS_INTERVAL);
+  deviceTimer = setInterval(fetchDevices, DEVICE_INTERVAL);
+}
+
+function stopTimers() {
+  clearInterval(statsTimer);
+  clearInterval(deviceTimer);
+}
+
+function toggleAutoRefresh() {
+  autoRefresh = !autoRefresh;
+  const btn = document.getElementById("toggle-btn");
+  if (autoRefresh) {
+    btn.textContent = "Auto-refresh ON";
+    btn.classList.add("active");
+    startTimers();
+    fetchStats();
+    fetchDevices();
+  } else {
+    btn.textContent = "Auto-refresh OFF";
+    btn.classList.remove("active");
+    stopTimers();
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+(function init() {
+  fetchStats();
+  fetchDevices();
+  startTimers();
+})();
+</script>
+</body>
+</html>

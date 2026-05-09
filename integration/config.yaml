@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 broker:
-  host: mqtt_broker       # Docker service name; use 'localhost' for local dev
+  host: 192.168.0.104
   port: 1883
   client_id: integration-service
 
