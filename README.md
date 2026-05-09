@@ -196,6 +196,44 @@ Written by `frontend/index.html`, read at startup.
 
 ---
 
+## Device Whitelist
+
+The integration has a built-in device whitelist to control which devices are auto-created in ChirpStack when a JOIN REQUEST is detected.
+
+### How it works
+
+| Whitelist state | Behaviour |
+|---|---|
+| **Empty** (default) | All devices allowed — any JOIN REQUEST auto-creates the device |
+| **Has entries** | Only listed DevEUIs are allowed — unknown devices are rejected and logged |
+
+### Managing devices via UI
+
+Open `frontend/index.html` → **Devices** tab:
+
+- **Add Device** — enter Name, DevEUI (16 hex chars), optional AppKey (stored for reference)
+- **Disable** — temporarily block a device without removing it
+- **Remove** — delete from whitelist
+
+### settings.json structure
+
+```json
+{
+  "devices": [
+    {
+      "name": "Temp Sensor 01",
+      "dev_eui": "0807060504030201",
+      "app_key": "00000000000000000000000000000001",
+      "enabled": true
+    }
+  ]
+}
+```
+
+> **Note:** AppKey is stored for reference only. LoRaWAN JOIN REQUEST frames do not transmit the AppKey over the air — it cannot be verified from the frame. Frame verification is handled by ChirpStack using the AppKey you entered when registering the device.
+
+---
+
 ## ChirpStack Setup
 
 ### Primary ChirpStack

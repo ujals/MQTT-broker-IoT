@@ -23,6 +23,22 @@ _UUID_RE = re.compile(
 def _is_uuid(s: str) -> bool:
     return bool(s and _UUID_RE.match(s))
 
+
+def _normalise_eui(s: str) -> str:
+    return s.lower().replace(":", "").replace("-", "").strip()
+
+
+def _check_whitelist(dev_eui: str, devices: list) -> tuple[bool, str]:
+    """Return (allowed, device_name). If whitelist empty, allow all."""
+    if not devices:
+        return True, f"device-{dev_eui}"
+    for d in devices:
+        if not d.get("enabled", True):
+            continue
+        if _normalise_eui(d.get("dev_eui", "")) == dev_eui:
+            return True, d.get("name", f"device-{dev_eui}")
+    return False, ""
+
 import aiohttp
 import paho.mqtt.client as mqtt
 
@@ -298,11 +314,15 @@ class ChirpStackIntegration(BaseIntegration):
             if phy:
                 dev_eui = _extract_dev_eui_from_join(phy)
                 if dev_eui and dev_eui not in self._seen_dev and self._primary_api:
+                    allowed, dev_name = _check_whitelist(
+                        dev_eui, self._settings.get("devices", []))
+                    if not allowed:
+                        log.warning("JOIN REJECTED — DevEUI %s not in whitelist", dev_eui)
+                        return
                     cs = self._settings.get("chirpstack", {})
-                    # Create device on primary for OTAA
                     if not await self._primary_api.device_exists(dev_eui):
                         await self._primary_api.create_device(
-                            dev_eui, f"device-{dev_eui}",
+                            dev_eui, dev_name,
                             cs.get("application_id", ""),
                             cs.get("device_profile_id", "")
                         )
@@ -321,13 +341,17 @@ class ChirpStackIntegration(BaseIntegration):
             return
         eui = eui.lower().replace(":", "").replace("-", "")
         if eui not in self._seen_dev:
+            allowed, dev_name = _check_whitelist(eui, self._settings.get("devices", []))
+            if not allowed:
+                log.warning("DEVICE REJECTED — DevEUI %s not in whitelist", eui)
+                return
             info = payload.get("deviceInfo", {})
             cs   = self._settings.get("chirpstack", {})
             app_id     = info.get("applicationId",  "") if _is_uuid(info.get("applicationId",  "")) else cs.get("application_id",    "")
             profile_id = info.get("deviceProfileId","") if _is_uuid(info.get("deviceProfileId","")) else cs.get("device_profile_id", "")
             await self._primary_api.create_device(
                 eui,
-                info.get("deviceName", f"device-{eui}"),
+                info.get("deviceName", dev_name),
                 app_id,
                 profile_id,
             )

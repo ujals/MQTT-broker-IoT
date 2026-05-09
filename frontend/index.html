@@ -64,6 +64,7 @@
 <nav>
   <button class="active" onclick="showTab('settings',this)">Settings</button>
   <button onclick="showTab('targets',this)">ChirpStack Targets</button>
+  <button onclick="showTab('devices',this)">Devices</button>
   <button onclick="showTab('status',this)">Status</button>
 </nav>
 
@@ -152,6 +153,34 @@
   </div>
 </div>
 
+<!-- Devices Tab -->
+<div class="tab" id="tab-devices">
+  <div class="card">
+    <h2>Device Whitelist</h2>
+    <p style="font-size:13px;color:#888;margin-bottom:14px">
+      Only devices listed here will be auto-created in ChirpStack when a JOIN REQUEST is detected.
+      If the list is <strong style="color:#e0e0e0">empty</strong>, all devices are allowed (open mode).
+    </p>
+    <div class="target-list" id="device-list">
+      <div style="color:#555;font-size:13px">No devices in whitelist — all JOINs allowed.</div>
+    </div>
+    <button class="btn btn-secondary" style="margin-top:14px" onclick="toggleDeviceForm()">+ Add Device</button>
+    <div class="add-form" id="device-add-form">
+      <h2 style="margin-bottom:14px">Add Allowed Device</h2>
+      <label>Device Name</label>
+      <input id="d-name" placeholder="e.g. Temp Sensor 01" />
+      <label>DevEUI</label>
+      <input id="d-eui" placeholder="0807060504030201" style="font-family:monospace" />
+      <label>AppKey (optional — for display/reference only)</label>
+      <input id="d-appkey" placeholder="32 hex chars — not verified in frame, stored for reference" style="font-family:monospace" />
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn btn-primary" onclick="addDevice()">Add</button>
+        <button class="btn btn-secondary" onclick="toggleDeviceForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Status Tab -->
 <div class="tab" id="tab-status">
   <div class="status-row">
@@ -191,6 +220,7 @@ function showTab(name, btn) {
   btn.classList.add("active");
   if (name === "status") refreshStatus();
   if (name === "targets") loadTargets();
+  if (name === "devices") loadDevices();
 }
 
 function toast(msg, err=false) {
@@ -331,6 +361,75 @@ async function removeTarget(idx) {
   await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(d) });
   toast("Target removed");
   loadTargets();
+}
+
+// ── Devices ───────────────────────────────────────────────────────────────────
+
+async function loadDevices() {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  const devices = d.devices || [];
+  const list = document.getElementById("device-list");
+  if (!devices.length) {
+    list.innerHTML = '<div style="color:#555;font-size:13px">No devices in whitelist — all JOINs allowed.</div>';
+    return;
+  }
+  list.innerHTML = devices.map((d, i) => `
+    <div class="target-row">
+      <div class="dot ${d.enabled !== false ? 'green' : ''}"></div>
+      <div class="tname">${d.name}</div>
+      <div class="thost">
+        <span style="font-family:monospace">${d.dev_eui}</span>
+        ${d.app_key ? `<br><span style="font-size:11px;color:#555">AppKey: ${d.app_key.substring(0,8)}••••••••</span>` : ''}
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="toggleDevice(${i})">${d.enabled !== false ? 'Disable' : 'Enable'}</button>
+      <button class="btn btn-danger btn-sm" onclick="removeDevice(${i})">Remove</button>
+    </div>`).join("");
+}
+
+function toggleDeviceForm() {
+  document.getElementById("device-add-form").classList.toggle("open");
+}
+
+async function addDevice() {
+  const name   = document.getElementById("d-name").value.trim();
+  const eui    = document.getElementById("d-eui").value.trim().toLowerCase().replace(/[:\-\s]/g, "");
+  const appkey = document.getElementById("d-appkey").value.trim();
+  if (!name || !eui) { toast("Name and DevEUI are required", true); return; }
+  if (eui.length !== 16) { toast("DevEUI must be 16 hex characters", true); return; }
+
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  const devices = d.devices || [];
+  devices.push({ name, dev_eui: eui, app_key: appkey, enabled: true });
+
+  const res = await fetch(`${BASE}/settings`, {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ ...d, devices })
+  });
+  if (res.ok) {
+    toast("Device added to whitelist");
+    document.getElementById("device-add-form").classList.remove("open");
+    ["d-name","d-eui","d-appkey"].forEach(id => document.getElementById(id).value = "");
+    loadDevices();
+  } else toast("Failed to save", true);
+}
+
+async function toggleDevice(idx) {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  d.devices[idx].enabled = d.devices[idx].enabled === false ? true : false;
+  await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(d) });
+  loadDevices();
+}
+
+async function removeDevice(idx) {
+  const r = await fetch(`${BASE}/settings`);
+  const d = await r.json();
+  d.devices.splice(idx, 1);
+  await fetch(`${BASE}/settings`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(d) });
+  toast("Device removed");
+  loadDevices();
 }
 
 // ── Status ────────────────────────────────────────────────────────────────────
