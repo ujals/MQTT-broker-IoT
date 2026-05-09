@@ -1,0 +1,71 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Integration Service  –  config.yaml
+# Edit this file and restart the container — no rebuild needed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+broker:
+  host: mqtt_broker       # Docker service name; use 'localhost' for local dev
+  port: 1883
+  client_id: integration-service
+
+# Which MQTT topics to subscribe to on the local broker.
+subscriptions:
+  - topic: "#"            # subscribe to everything; narrow down as needed
+    qos: 1
+
+# ── Integrations ──────────────────────────────────────────────────────────────
+# Set  enabled: true  to activate.  No rebuild — just restart the container.
+
+integrations:
+
+  # ── HTTP / REST endpoint ─────────────────────────────────────────────────
+  # Every incoming MQTT message is POSTed as JSON to this URL.
+  # Use {topic} in the URL to include the MQTT topic path.
+  - name: my_backend
+    type: http
+    enabled: false
+    url: "http://192.168.1.100:8080/api/ingest"
+    method: POST
+    timeout: 10
+    retry_attempts: 3
+    ssl_verify: true
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer YOUR_TOKEN"
+
+  # ── ChirpStack (MQTT bridge) ─────────────────────────────────────────────
+  - name: chirpstack
+    type: mqtt
+    enabled: false
+    host: chirpstack.example.com
+    port: 1883
+    username: ""
+    password: ""
+    topic_prefix: ""        # e.g. "lns/" makes topic "lns/dev/001"
+    qos: 1
+    retain: false
+
+  # ── The Things Network v3 ────────────────────────────────────────────────
+  - name: ttn
+    type: mqtt
+    enabled: false
+    host: eu1.cloud.thethings.network
+    port: 8883
+    tls: true               # TTN requires TLS
+    username: "your-app-id@ttn"
+    password: "YOUR_TTN_API_KEY"
+    topic_prefix: "v3/"
+    qos: 0
+
+  # ── Any other MQTT broker ────────────────────────────────────────────────
+  - name: cloud_broker
+    type: mqtt
+    enabled: false
+    host: broker.example.com
+    port: 1883
+    username: ""
+    password: ""
+    topic_prefix: ""
+
+logging:
+  level: INFO

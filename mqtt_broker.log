@@ -1,0 +1,58 @@
+2026-05-09 15:20:37,772 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 15:20:37,775 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 15:20:37,779 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 15:20:51,770 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 15:20:51,771 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 15:20:51,775 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 15:20:56,011 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 15:20:56,014 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 15:20:56,018 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 21:07:14,305 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 21:07:14,305 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 21:07:14,310 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 21:10:13,020 [INFO    ] mqtt_broker – Interrupted — shutting down.
+2026-05-09 21:13:53,444 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 21:13:53,444 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 21:13:53,451 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 21:14:28,687 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 21:14:28,687 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 21:14:40,133 [INFO    ] mqtt_broker – === MQTT Broker starting (config: config.yaml) ===
+2026-05-09 21:14:40,133 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 21:37:44,661 [INFO    ] mqtt_broker – === MQTT Broker v1.0.0 starting (config: config.yaml) ===
+2026-05-09 21:37:44,661 [INFO    ] mqtt_broker.auth – Auth disabled — all clients accepted
+2026-05-09 21:37:44,661 [INFO    ] mqtt_broker.broker – Listening on 0.0.0.0:1883
+2026-05-09 21:41:19,224 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:54531
+2026-05-09 21:41:19,227 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54531) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 21:43:07,768 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS0
+2026-05-09 21:43:49,763 [INFO    ] mqtt_broker.broker – Ujaltest: UNSUBSCRIBE 'test/#'
+2026-05-09 21:43:58,739 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 21:51:11,204 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54531) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 21:51:11,209 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54531) (Ujaltest): disconnected (clean=False)
+2026-05-09 21:51:16,218 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:65504
+2026-05-09 21:51:16,218 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 65504) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 21:51:16,229 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 21:58:00,218 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 65504) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 21:58:00,220 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 65504) (Ujaltest): disconnected (clean=False)
+2026-05-09 21:58:05,218 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:59000
+2026-05-09 21:58:05,220 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 59000) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 21:58:05,231 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 22:01:16,621 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 59000) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 22:01:16,622 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 59000) (Ujaltest): disconnected (clean=False)
+2026-05-09 22:01:21,208 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:63335
+2026-05-09 22:01:21,208 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 63335) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 22:01:21,212 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 22:08:00,224 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 63335) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 22:08:00,224 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 63335) (Ujaltest): disconnected (clean=False)
+2026-05-09 22:08:05,205 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:54825
+2026-05-09 22:08:05,211 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54825) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 22:08:05,235 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 22:15:56,789 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54825) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 22:15:56,790 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 54825) (Ujaltest): disconnected (clean=False)
+2026-05-09 22:16:01,207 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:58019
+2026-05-09 22:16:01,207 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 58019) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 22:16:01,207 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1
+2026-05-09 22:23:00,228 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 58019) (Ujaltest): connection lost / keepalive timeout
+2026-05-09 22:23:00,228 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 58019) (Ujaltest): disconnected (clean=False)
+2026-05-09 22:23:05,207 [INFO    ] mqtt_broker.broker – New connection from 127.0.0.1:55476
+2026-05-09 22:23:05,207 [INFO    ] mqtt_broker.broker – ('127.0.0.1', 55476) (Ujaltest): CONNECTED  v5.0  clean=True
+2026-05-09 22:23:05,213 [INFO    ] mqtt_broker.broker – Ujaltest: SUBSCRIBE 'test/#' QoS1

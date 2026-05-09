@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+
+  # ── Pure-Python MQTT Broker ──────────────────────────────────────────────────
+  mqtt_broker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883"       # plain MQTT
+      # - "8883:8883"     # TLS — uncomment when certs are ready
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro      # edit config, restart to reload
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',1883)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ── Integration / Fan-out Service ────────────────────────────────────────────
+  integration:
+    build:
+      context: ./integration
+      dockerfile: Dockerfile
+    container_name: integration
+    ports:
+      - "8000:8000"       # API: GET /health  /metrics  /integrations
+    volumes:
+      - ./integration/config.yaml:/app/config.yaml:ro   # edit, restart to reload
+    depends_on:
+      mqtt_broker:
+        condition: service_healthy
+    restart: unless-stopped
